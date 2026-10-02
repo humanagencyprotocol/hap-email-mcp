@@ -1,4 +1,5 @@
 /** The MCP tool surface — kept in its own module so tests can read it without starting the server. */
+import { SIMULATION_PACKAGE_SCHEMA } from "../simulation-package-schema.js";
 const RECEIPT_FIELD = {
   type: "string" as const,
   description: "Suveren authorizing receipt id. Injected by the gateway — agents do not set this.",
@@ -56,10 +57,7 @@ export const TOOL_DEFINITIONS = [
     inputSchema: {
       type: "object",
       properties: {
-        package: {
-          type: "object",
-          description: "The simulation package: { name, cases: [{ id, request: { from, subject, body, received_at? }, reply: { subject, body }, notes? }], ... }",
-        },
+        package: { ...SIMULATION_PACKAGE_SCHEMA, description: `${SIMULATION_PACKAGE_SCHEMA.description} This connector loads \`name\`, optional \`email\` and \`cases\` (one inbox message per case request; replies kept for comparison); \`customers\`, \`products\` and \`contacts\` are used by the CRM and the ERP.` },
         receipt_id: RECEIPT_FIELD,
       },
       required: ["package"],

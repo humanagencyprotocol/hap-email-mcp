@@ -1,6 +1,6 @@
 {
   "name": "@humanagencyp/email-mcp",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Email MCP server for the Human Agency Protocol — a simulated inbox the agent reads and replies to: list/read messages, send a reply, nothing leaves the laptop",
   "license": "MIT",
   "repository": {

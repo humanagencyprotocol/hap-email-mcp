@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS simulation_load (
   name TEXT NOT NULL,
   package_sha256 TEXT NOT NULL,
   cases_loaded INTEGER NOT NULL,
-  loaded_at TEXT NOT NULL
+  loaded_at TEXT NOT NULL,
+  email TEXT
 );
 
 -- Calls the connector refused AFTER the gateway let them through. When the gateway
@@ -74,6 +75,9 @@ async function createSqliteDb(dbPath: string): Promise<Db> {
   const db = new Database(dbPath);
   db.pragma("foreign_keys = ON");
   db.exec(SCHEMA);
+  // Migration: simulation_load.email (company mailbox) added in 0.1.1.
+  const loadCols = db.prepare(`PRAGMA table_info(simulation_load)`).all() as Array<{ name: string }>;
+  if (!loadCols.some((c) => c.name === "email")) db.exec(`ALTER TABLE simulation_load ADD COLUMN email TEXT`);
 
   return {
     async run(sql: string, params: any[] = []): Promise<void> {
@@ -107,6 +111,7 @@ async function createPostgresDb(connectionString: string): Promise<Db> {
   const client = await pool.connect();
   try {
     await client.query(pgSchema);
+    await client.query(`ALTER TABLE simulation_load ADD COLUMN IF NOT EXISTS email TEXT`);
   } finally {
     client.release();
   }

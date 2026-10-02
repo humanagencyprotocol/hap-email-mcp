@@ -89,9 +89,9 @@ function requireEmailList(value: unknown, field: string, { allowEmpty = false } 
 
 /** The address/name this connector sends as — the simulated company if a package was loaded, else a generic default. */
 async function resolveSelf(db: Db): Promise<{ name: string; email: string }> {
-  const load = await db.get<{ name: string }>(`SELECT name FROM simulation_load WHERE id = 'default'`);
-  if (load) return { name: load.name, email: companyAddress(load.name) };
-  return { name: "Me", email: "me@inbox.simulated" };
+  const load = await db.get<{ name: string; email: string | null }>(`SELECT name, email FROM simulation_load WHERE id = 'default'`);
+  if (load) return { name: load.name, email: companyAddress(load.name, load.email) };
+  return { name: "Office", email: "office@company.com" };
 }
 
 export async function send_message(db: Db, args: Record<string, any>) {

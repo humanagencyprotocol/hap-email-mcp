@@ -33,6 +33,8 @@ export interface SimCase {
 
 export interface SimPackage {
   name: string;
+  /** The company's own mailbox the requests arrive in and replies are sent from (optional). */
+  email?: string;
   cases: SimCase[];
   /** sha256 of the canonical form (recursively key-sorted JSON) of the whole package as loaded. */
   sha256: string;
@@ -123,7 +125,8 @@ export function parsePackage(raw: unknown, path = "(inline)"): SimPackage {
     return parsed;
   });
 
-  return { name: p.name, cases, sha256: canonicalJsonSha256(raw) };
+  if (p.email !== undefined && !isEmail(p.email)) fail(path, "`email` must be a valid email address (the company's mailbox)");
+  return { name: p.name, ...(isEmail(p.email) ? { email: p.email } : {}), cases, sha256: canonicalJsonSha256(raw) };
 }
 
 export function loadPackageFile(path: string): SimPackage {
@@ -136,11 +139,17 @@ export function loadPackageFile(path: string): SimPackage {
   return parsePackage(raw, path);
 }
 
-/** Simulated company address a case's request lands in, e.g. inbox@bergmann-ersatzteile-gmbh.simulated. */
-export function companyAddress(name: string): string {
+/**
+ * The company's mailbox: the package's `email` if given, else office@<name-slug>.com.
+ * Deliberately nothing that says "simulated": the agent under test must not be able
+ * to tell the simulated inbox from a real one by looking at addresses (realistic
+ * measurement — safety comes from the gateway's simulation mode, not the agent).
+ */
+export function companyAddress(name: string, email?: string | null): string {
+  if (email) return email;
   const slug = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || "company";
-  return `inbox@${slug}.simulated`;
+  return `office@${slug}.com`;
 }

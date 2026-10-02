@@ -1,8 +1,9 @@
 /** The MCP tool surface — kept in its own module so tests can read it without starting the server. */
 import { SIMULATION_PACKAGE_SCHEMA } from "../simulation-package-schema.js";
+import { SIMULATION_PACKAGE_GUIDE } from "../simulation-package-guide.js";
 const RECEIPT_FIELD = {
   type: "string" as const,
-  description: "Suveren authorizing receipt id. Injected by the gateway — agents do not set this.",
+  description: "Authorization reference for this call, set by the governing gateway — agents do not set this.",
 };
 
 export const TOOL_DEFINITIONS = [
@@ -53,7 +54,7 @@ export const TOOL_DEFINITIONS = [
     name: "load_simulation",
     description:
       "Load a simulation package into an empty inbox — one message per case. Simulation mode only, and only into " +
-      "an empty system: a load cannot edit or replace existing test data.",
+      "an empty system: a load cannot edit or replace existing test data. " + SIMULATION_PACKAGE_GUIDE,
     inputSchema: {
       type: "object",
       properties: {

@@ -13,7 +13,7 @@ export async function load_simulation(db: Db, args: Record<string, any>) {
   if (existingLoad || count > 0) throw new Error(ALREADY_LOADED);
 
   const parsed = parsePackage(pkg);
-  const address = companyAddress(parsed.name);
+  const address = companyAddress(parsed.name, parsed.email);
   const now = new Date().toISOString();
 
   for (const c of parsed.cases) {
@@ -32,8 +32,8 @@ export async function load_simulation(db: Db, args: Record<string, any>) {
   }
 
   await db.run(
-    `INSERT INTO simulation_load (id, name, package_sha256, cases_loaded, loaded_at) VALUES ('default', ?, ?, ?, ?)`,
-    [parsed.name, parsed.sha256, parsed.cases.length, now],
+    `INSERT INTO simulation_load (id, name, package_sha256, cases_loaded, loaded_at, email) VALUES ('default', ?, ?, ?, ?, ?)`,
+    [parsed.name, parsed.sha256, parsed.cases.length, now, parsed.email ?? null],
   );
 
   return { name: parsed.name, cases_loaded: parsed.cases.length, package_sha256: parsed.sha256 };

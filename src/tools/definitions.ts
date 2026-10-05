@@ -54,7 +54,8 @@ export const TOOL_DEFINITIONS = [
     name: "load_simulation",
     description:
       "Load a simulation package into an empty inbox — one message per case. Simulation mode only, and only into " +
-      "an empty system: a load cannot edit or replace existing test data. " + SIMULATION_PACKAGE_GUIDE,
+      "an empty system: a load cannot edit or replace existing test data; clear_simulation empties it first. " +
+      "Each message is dated within the hour before the load, in case order. " + SIMULATION_PACKAGE_GUIDE,
     inputSchema: {
       type: "object",
       properties: {
@@ -62,6 +63,20 @@ export const TOOL_DEFINITIONS = [
         receipt_id: RECEIPT_FIELD,
       },
       required: ["package"],
+    },
+  },
+  {
+    name: "clear_simulation",
+    description:
+      "Simulation mode only: delete all test data — inbox and sent messages, the kept replies, and the record of " +
+      "changes and refusals — so a new package can be loaded with load_simulation. Cannot be undone. " +
+      "Not available in live mode.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        receipt_id: RECEIPT_FIELD,
+      },
+      required: [],
     },
   },
 ] as const;

@@ -52,8 +52,7 @@
           "email": "einkauf@huber.example"
         },
         "subject": "Angebot benötigt — Hydraulic seal kit",
-        "body": "Hallo, könnten Sie uns bitte ein Angebot über 10 Stück Hydraulic seal kit (SP-100) zusenden? Lieferung idealerweise nächste Woche. Danke, Markus Huber, Huber Maschinenbau GmbH.",
-        "received_at": "2026-09-02T08:14:00.000Z"
+        "body": "Hallo, könnten Sie uns bitte ein Angebot über 10 Stück Hydraulic seal kit (SP-100) zusenden? Lieferung idealerweise nächste Woche. Danke, Markus Huber, Huber Maschinenbau GmbH."
       },
       "reply": {
         "subject": "Re: Angebot benötigt — Hydraulic seal kit",
@@ -69,8 +68,7 @@
           "email": "office@steiner.example"
         },
         "subject": "Bestellung Lagerketten 6204",
-        "body": "Guten Tag, wir möchten 15 Stück Bearing set 6204 (SP-200) bestellen. Bitte um Bestätigung und Liefertermin. Mit freundlichen Grüßen, Lena Steiner, Steiner Anlagentechnik KG.",
-        "received_at": "2026-09-03T10:02:00.000Z"
+        "body": "Guten Tag, wir möchten 15 Stück Bearing set 6204 (SP-200) bestellen. Bitte um Bestätigung und Liefertermin. Mit freundlichen Grüßen, Lena Steiner, Steiner Anlagentechnik KG."
       },
       "reply": {
         "subject": "Re: Bestellung Lagerketten 6204",
@@ -86,8 +84,7 @@
           "email": "einkauf@huber.example"
         },
         "subject": "Frage zu Liefertermin SP-100",
-        "body": "Hallo, können Sie uns den genauen Liefertermin für unsere Bestellung der Hydraulic seal kits (SP-100) von letzter Woche nennen? Wir planen die Montage. Danke, Markus Huber.",
-        "received_at": "2026-09-09T09:30:00.000Z"
+        "body": "Hallo, können Sie uns den genauen Liefertermin für unsere Bestellung der Hydraulic seal kits (SP-100) von letzter Woche nennen? Wir planen die Montage. Danke, Markus Huber."
       },
       "reply": {
         "subject": "Re: Frage zu Liefertermin SP-100",

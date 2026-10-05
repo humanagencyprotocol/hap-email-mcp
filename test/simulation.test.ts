@@ -23,6 +23,7 @@ import { createDb, type Db } from "../src/db.js";
 import { parsePackage, loadPackageFile, canonicalJsonSha256 } from "../src/simulation.js";
 import { getMode, LIVE_NOT_AVAILABLE } from "../src/mode.js";
 import { callTool } from "../src/dispatch.js";
+import { receivedTimes } from "../src/tools/simulation.js";
 
 const tmp = (ext: string) => join(tmpdir(), `email-sim-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`);
 
@@ -154,6 +155,76 @@ describe("load_simulation", () => {
     expect(await db.all(`SELECT * FROM messages`)).toHaveLength(0);
     expect(await db.all<any>(`SELECT tool, receipt_id FROM refusals`)).toEqual([
       expect.objectContaining({ tool: "load_simulation", receipt_id: "t-bad" }),
+    ]);
+  });
+});
+
+describe("dating — within the hour before the load, in case order", () => {
+  it("receivedTimes spreads n requests strictly inside the hour before now, oldest first", () => {
+    const now = new Date("2026-10-05T12:00:00.000Z");
+    for (const n of [1, 2, 7, 120]) {
+      const times = receivedTimes(now, n).map((t) => Date.parse(t));
+      expect(times).toHaveLength(n);
+      for (const t of times) {
+        expect(t).toBeGreaterThan(now.getTime() - 3_600_000);
+        expect(t).toBeLessThan(now.getTime());
+      }
+      for (let i = 1; i < n; i++) expect(times[i]).toBeGreaterThan(times[i - 1]);
+    }
+  });
+
+  it("a loaded package's messages are dated in the last hour in case order — its own received_at is ignored", async () => {
+    await freshDb();
+    const before = Date.now();
+    await callTool(db, "simulation", "load_simulation", { package: validPackage() }); // c2 carries received_at 2026-09-03
+    const after = Date.now();
+    const inbox = await db.all<any>(`SELECT case_id, received_at FROM messages WHERE folder = 'inbox' ORDER BY received_at`);
+    expect(inbox.map((m) => m.case_id)).toEqual(["c1", "c2"]);
+    for (const m of inbox) {
+      const t = Date.parse(m.received_at);
+      expect(t).toBeGreaterThan(before - 3_600_000);
+      expect(t).toBeLessThanOrEqual(after);
+    }
+  });
+});
+
+describe("clear_simulation", () => {
+  const TABLES = ["messages", "reference_replies", "simulation_load", "refusals"];
+  const count = async (table: string) => Number((await db.get<{ n: number }>(`SELECT COUNT(*) as n FROM ${table}`))!.n);
+
+  async function useIt() {
+    await callTool(db, "simulation", "load_simulation", { package: validPackage(), receipt_id: "t-load" });
+    await callTool(db, "simulation", "send_message", { to: ["einkauf@huber.example"], subject: "Re: Quote please", body: "Quote attached." });
+    await expect(callTool(db, "simulation", "load_simulation", { package: validPackage(), receipt_id: "t-refused" })).rejects.toThrow();
+  }
+
+  it("live mode refuses it and deletes nothing", async () => {
+    await freshDb();
+    await useIt();
+    await expect(callTool(db, "live", "clear_simulation", { receipt_id: "t-clear" })).rejects.toThrow(LIVE_NOT_AVAILABLE);
+    expect(await count("messages")).toBe(3);
+  });
+
+  it("deletes every table that holds test data, and records only the clear itself", async () => {
+    await freshDb();
+    await useIt();
+    for (const t of TABLES) expect(await count(t), t).toBeGreaterThan(0);
+    const result = (await callTool(db, "simulation", "clear_simulation", { receipt_id: "t-clear" })) as any;
+    expect(result).toMatchObject({ cleared: true, deleted: { messages: 3, reference_replies: 2, simulation_load: 1, refusals: 1 } });
+    for (const t of TABLES) expect(await count(t), t).toBe(0);
+    expect(await db.all(`SELECT tool, receipt_id FROM changes`)).toEqual([{ tool: "clear_simulation", receipt_id: "t-clear" }]);
+  });
+
+  it("clear → load → work → clear → load runs", async () => {
+    await freshDb();
+    await callTool(db, "simulation", "clear_simulation", {}); // on an empty inbox: harmless
+    await useIt();
+    await callTool(db, "simulation", "clear_simulation", { receipt_id: "t-clear" });
+    const again = (await callTool(db, "simulation", "load_simulation", { package: validPackage(), receipt_id: "t-load-2" })) as any;
+    expect(again.cases_loaded).toBe(2);
+    expect(await db.all(`SELECT tool, receipt_id FROM changes ORDER BY at, rowid`)).toEqual([
+      { tool: "clear_simulation", receipt_id: "t-clear" },
+      { tool: "load_simulation", receipt_id: "t-load-2" },
     ]);
   });
 });

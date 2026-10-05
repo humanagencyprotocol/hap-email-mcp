@@ -6,10 +6,10 @@ import { randomUUID } from "crypto";
 import type { Db } from "./db.js";
 import { LIVE_NOT_AVAILABLE, type EmailMode } from "./mode.js";
 import { list_messages, get_message, send_message } from "./tools/messages.js";
-import { load_simulation } from "./tools/simulation.js";
+import { load_simulation, clear_simulation } from "./tools/simulation.js";
 
 /** Tools that change the connector's state — the ones the gateway issues a ticket for. */
-export const CHANGE_TOOLS = new Set(["send_message", "load_simulation"]);
+export const CHANGE_TOOLS = new Set(["send_message", "load_simulation", "clear_simulation"]);
 
 async function runTool(db: Db, name: string, args: Record<string, any>): Promise<unknown> {
   switch (name) {
@@ -17,6 +17,7 @@ async function runTool(db: Db, name: string, args: Record<string, any>): Promise
     case "get_message": return get_message(db, args);
     case "send_message": return send_message(db, args);
     case "load_simulation": return load_simulation(db, args);
+    case "clear_simulation": return clear_simulation(db, args);
     default: throw new Error(`Unknown tool: ${name}`);
   }
 }
@@ -32,6 +33,8 @@ function describeChange(name: string, result: unknown): { documentId: string | n
         documentId: typeof r.package_sha256 === "string" ? r.package_sha256 : null,
         summary: `${r.name ?? "?"}: ${r.cases_loaded ?? 0} cases loaded`,
       };
+    case "clear_simulation":
+      return { documentId: null, summary: "cleared" };
     default:
       return { documentId: (r.id as string) ?? null, summary: "" };
   }

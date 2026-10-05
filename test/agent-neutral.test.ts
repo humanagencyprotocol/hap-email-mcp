@@ -3,8 +3,8 @@
  * one (decision 2026-10-02): realistic measurement, and safety comes from the
  * gateway's simulation mode — not from what the agent believes. So nothing the
  * working agent sees may say "simulated": not the tool descriptions, not the
- * addresses, not the tool results. load_simulation is exempt — the gateway hides
- * it from agents without a setup mandate.
+ * addresses, not the tool results. load_simulation and clear_simulation are exempt —
+ * the gateway hides them from agents without a setup mandate.
  */
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { tmpdir } from "os";
@@ -27,7 +27,7 @@ beforeEach(async () => {
 afterEach(async () => { await db.close(); rmSync(dbPath, { force: true }); });
 
 describe("nothing the working agent sees reveals the simulation", () => {
-  const working = TOOL_DEFINITIONS.filter((t) => t.name !== "load_simulation");
+  const working = TOOL_DEFINITIONS.filter((t) => t.name !== "load_simulation" && t.name !== "clear_simulation");
 
   it("tool names, descriptions and argument descriptions", () => {
     expect(working.length).toBeGreaterThan(0);

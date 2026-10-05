@@ -66,6 +66,7 @@ DATABASE_URL=postgres://user:pass@host:5432/mydb node dist/index.js
 |------|-------------|
 | `send_message` | Send a reply (`to`, `cc?`, `subject`, `body`, `in_reply_to?`) — simulated, lands in "sent" |
 | `load_simulation` | Load a simulation package into an empty inbox, one message per case — create only |
+| `clear_simulation` | Delete all test data so a new package can be loaded |
 
 Every change tool declares `receipt_id` in its schema; the gateway injects it,
 agents do not set it.
@@ -87,8 +88,7 @@ connector reads only `cases` and ignores the rest:
       "request": {
         "from": { "name": "Markus Huber", "email": "einkauf@huber.example" },
         "subject": "Quote please",
-        "body": "...",
-        "received_at": "2026-09-02T08:14:00.000Z"
+        "body": "..."
       },
       "reply": { "subject": "Re: Quote please", "body": "..." },
       "notes": "optional — what was special about this case"
@@ -100,12 +100,19 @@ connector reads only `cases` and ignores the rest:
 - **Strictly validated**, refused whole on the first problem, naming the field
   (e.g. `cases[2].request.from.email`). Case ids must be unique.
 - **`load_simulation` creates, it never edits.** Refused if a package was
-  already loaded, or if any message already exists — "start from an empty
-  database."
+  already loaded, or if any message already exists — clear first, then load.
+- **`clear_simulation` empties it again.** Deletes all test data — inbox and
+  sent messages, the kept replies, and the record of changes and refusals — so
+  the same cases can run again under a different setup, or other cases under
+  the same one. Refused in live mode. The clear itself stays recorded as one
+  change with its `receipt_id`. Cannot be undone — take an `export` first if
+  you want to keep the record.
 - One inbox message is created per case: `from` = the case's requester, `to` =
   a fixed simulated company address derived from the package name (e.g.
-  `inbox@bergmann-ersatzteile-gmbh.simulated`), `received_at` = the case's
-  `received_at` or the load time.
+  `inbox@bergmann-ersatzteile-gmbh.simulated`), `received_at` = a time within
+  the hour before the load, spread evenly in case order (first case oldest).
+  A `received_at` in the package is accepted for older packages but ignored —
+  fixed dates would look stale on every re-run.
 - **`cases[].reply` — the people's actual answer — is never reachable through
   any MCP tool.** It is stored in a separate table and surfaces only in the
   `export` CLI command, for scoring the agent's replies after the fact.

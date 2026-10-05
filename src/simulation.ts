@@ -16,7 +16,6 @@ export interface SimCaseRequest {
   from: { name: string; email: string };
   subject: string;
   body: string;
-  received_at: string | null;
 }
 
 export interface SimCaseReply {
@@ -84,6 +83,7 @@ function parseCase(raw: unknown, path: string, i: number): SimCase {
   if (!isEmail(from.email)) fail(path, `${at}.request.from.email must be a valid email address`);
   if (!str(req.subject)) fail(path, `${at}.request.subject is required`);
   if (!str(req.body)) fail(path, `${at}.request.body is required`);
+  // received_at is accepted for older packages but ignored: requests are dated at load (see tools/simulation.ts).
   const receivedAt = req.received_at;
   if (receivedAt !== undefined && receivedAt !== null && !str(receivedAt)) {
     fail(path, `${at}.request.received_at must be a string (ISO 8601) when given`);
@@ -104,7 +104,6 @@ function parseCase(raw: unknown, path: string, i: number): SimCase {
       from: { name: from.name as string, email: from.email as string },
       subject: req.subject as string,
       body: req.body as string,
-      received_at: str(receivedAt) ? (receivedAt as string) : null,
     },
     reply: { subject: reply.subject as string, body: reply.body as string },
     notes: str(o.notes) ? (o.notes as string) : null,

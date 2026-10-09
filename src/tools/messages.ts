@@ -95,7 +95,9 @@ async function resolveSelf(db: Db): Promise<{ name: string; email: string }> {
 }
 
 export async function send_message(db: Db, args: Record<string, any>) {
-  const { to, cc, subject, body, in_reply_to, receipt_id } = args;
+  // ticket_id: stored on the existing receipt_id column (internal storage
+  // name, unchanged by the v0.7 wire rename of the tool argument).
+  const { to, cc, subject, body, in_reply_to, ticket_id } = args;
 
   const toList = requireEmailList(to, "to");
   const ccList = cc === undefined ? [] : requireEmailList(cc, "cc", { allowEmpty: true });
@@ -117,7 +119,7 @@ export async function send_message(db: Db, args: Record<string, any>) {
      VALUES (?, 'sent', ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`,
     [
       id, self.name, self.email, JSON.stringify(toList), ccList.length ? JSON.stringify(ccList) : null,
-      subject, body, now, in_reply_to ?? null, receipt_id ?? null,
+      subject, body, now, in_reply_to ?? null, ticket_id ?? null,
     ],
   );
 

@@ -39,9 +39,9 @@ describe("list_messages", () => {
 });
 
 describe("send_message", () => {
-  it("stores the message in the sent folder and records the change with its receipt_id", async () => {
+  it("stores the message in the sent folder and records the change with its ticket_id", async () => {
     const sent = (await callTool(db, "simulation", "send_message", {
-      to: ["customer@example.com"], subject: "Hello", body: "Hi there", receipt_id: "t-send-1",
+      to: ["customer@example.com"], subject: "Hello", body: "Hi there", ticket_id: "t-send-1",
     })) as any;
 
     expect(sent.folder).toBe("sent");
@@ -75,12 +75,18 @@ describe("send_message", () => {
     ["a missing subject", { to: ["a@example.com"], body: "b" }, /subject is required/],
     ["a missing body", { to: ["a@example.com"], subject: "s" }, /body is required/],
     ["an unknown in_reply_to", { to: ["a@example.com"], subject: "s", body: "b", in_reply_to: "nope" }, /Unknown in_reply_to message id/],
-  ])("refuses %s and records the refusal with its receipt_id", async (_label, args, msg) => {
-    await expect(callTool(db, "simulation", "send_message", { ...args, receipt_id: "t-bad" })).rejects.toThrow(msg);
+  ])("refuses %s and records the refusal with its ticket_id", async (_label, args, msg) => {
+    await expect(callTool(db, "simulation", "send_message", { ...args, ticket_id: "t-bad" })).rejects.toThrow(msg);
     expect(await db.all(`SELECT * FROM messages`)).toHaveLength(0);
     expect(await db.all<any>(`SELECT tool, receipt_id FROM refusals`)).toEqual([
       expect.objectContaining({ tool: "send_message", receipt_id: "t-bad" }),
     ]);
+  });
+
+  it("records the ticket_id argument from a call (v0.7 wire rename — stored in the receipt_id column)", async () => {
+    await callTool(db, "simulation", "send_message", { to: ["customer@example.com"], subject: "Wire", body: "Hi", ticket_id: "t-wire" });
+    const rows = await db.all<any>(`SELECT receipt_id FROM changes WHERE tool = 'send_message'`);
+    expect(rows).toEqual([{ receipt_id: "t-wire" }]);
   });
 });
 

@@ -42,22 +42,23 @@ function describeChange(name: string, result: unknown): { documentId: string | n
 
 /**
  * Run a tool in the given mode. Every successful change is recorded (`changes`)
- * with the receipt_id the gateway injected; a call the connector refuses AFTER
- * the gateway let it through is recorded in `refusals` with the same receipt_id —
+ * with the ticket_id the gateway injected; a call the connector refuses AFTER
+ * the gateway let it through is recorded in `refusals` with the same ticket_id —
  * that is the trace of a ticket whose action never happened. In live mode
  * nothing runs and nothing is recorded locally: there is no local system to have
- * refused anything. Reads record nothing either way.
+ * refused anything. Reads record nothing either way. Both tables store the id
+ * in their existing receipt_id column (internal storage name, unchanged).
  */
 export async function callTool(db: Db, mode: EmailMode, name: string, args: Record<string, any>): Promise<unknown> {
   if (mode === "live") throw new Error(LIVE_NOT_AVAILABLE);
-  const receiptId = typeof args.receipt_id === "string" ? args.receipt_id : null;
+  const ticketId = typeof args.ticket_id === "string" ? args.ticket_id : null;
   try {
     const result = await runTool(db, name, args);
     if (CHANGE_TOOLS.has(name)) {
       const { documentId, summary } = describeChange(name, result);
       await db.run(
         `INSERT INTO changes (id, at, tool, receipt_id, document_id, summary) VALUES (?, ?, ?, ?, ?, ?)`,
-        [randomUUID(), new Date().toISOString(), name, receiptId, documentId, summary],
+        [randomUUID(), new Date().toISOString(), name, ticketId, documentId, summary],
       );
     }
     return result;
@@ -65,7 +66,7 @@ export async function callTool(db: Db, mode: EmailMode, name: string, args: Reco
     if (CHANGE_TOOLS.has(name)) {
       const message = err instanceof Error ? err.message : String(err);
       await db.run(`INSERT INTO refusals (id, at, tool, receipt_id, message) VALUES (?, ?, ?, ?, ?)`, [
-        randomUUID(), new Date().toISOString(), name, receiptId, message,
+        randomUUID(), new Date().toISOString(), name, ticketId, message,
       ]);
     }
     throw err;

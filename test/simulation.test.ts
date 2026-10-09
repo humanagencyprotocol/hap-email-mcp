@@ -12,7 +12,7 @@
  * - the people's actual reply (the reference answer the agent is measured
  *   against) is never reachable through any tool;
  * - a call refused after the gateway let it through is recorded with its
- *   receipt_id — the only trace that a ticket exists for an action that never
+ *   ticket_id — the only trace that a ticket exists for an action that never
  *   happened.
  */
 import { describe, it, expect, afterEach } from "vitest";
@@ -73,9 +73,9 @@ describe("mode switch", () => {
     await freshDb();
     await expect(callTool(db, "live", "list_messages", {})).rejects.toThrow(LIVE_NOT_AVAILABLE);
     await expect(callTool(db, "live", "get_message", { id: "x" })).rejects.toThrow(LIVE_NOT_AVAILABLE);
-    await expect(callTool(db, "live", "send_message", { to: ["a@b.example"], subject: "s", body: "b", receipt_id: "t-1" }))
+    await expect(callTool(db, "live", "send_message", { to: ["a@b.example"], subject: "s", body: "b", ticket_id: "t-1" }))
       .rejects.toThrow(/live mode/);
-    await expect(callTool(db, "live", "load_simulation", { package: validPackage(), receipt_id: "t-2" }))
+    await expect(callTool(db, "live", "load_simulation", { package: validPackage(), ticket_id: "t-2" }))
       .rejects.toThrow(/live mode/);
     expect(await db.all(`SELECT * FROM messages`)).toHaveLength(0);
     // Nothing local refused it — there is no local system in live mode — so nothing is recorded.
@@ -112,7 +112,7 @@ describe("package validation — refused whole, field named", () => {
 describe("load_simulation", () => {
   it("creates one inbox message per case, and records the package", async () => {
     await freshDb();
-    const result = (await callTool(db, "simulation", "load_simulation", { package: validPackage(), receipt_id: "t-load" })) as any;
+    const result = (await callTool(db, "simulation", "load_simulation", { package: validPackage(), ticket_id: "t-load" })) as any;
     expect(result).toMatchObject({ name: "Bergmann Ersatzteile GmbH", cases_loaded: 2 });
     expect(typeof result.package_sha256).toBe("string");
 
@@ -130,8 +130,8 @@ describe("load_simulation", () => {
 
   it("refuses a second load (create only) and records the refusal", async () => {
     await freshDb();
-    await callTool(db, "simulation", "load_simulation", { package: validPackage(), receipt_id: "t-first" });
-    await expect(callTool(db, "simulation", "load_simulation", { package: validPackage(), receipt_id: "t-second" }))
+    await callTool(db, "simulation", "load_simulation", { package: validPackage(), ticket_id: "t-first" });
+    await expect(callTool(db, "simulation", "load_simulation", { package: validPackage(), ticket_id: "t-second" }))
       .rejects.toThrow(/test data already loaded/);
 
     expect(await db.all(`SELECT * FROM messages`)).toHaveLength(2); // unchanged by the refused second load
@@ -143,14 +143,14 @@ describe("load_simulation", () => {
   it("refuses a load when messages already exist, even without a prior simulation_load row", async () => {
     await freshDb();
     await callTool(db, "simulation", "send_message", { to: ["someone@example.com"], subject: "hi", body: "hi" });
-    await expect(callTool(db, "simulation", "load_simulation", { package: validPackage(), receipt_id: "t-x" }))
+    await expect(callTool(db, "simulation", "load_simulation", { package: validPackage(), ticket_id: "t-x" }))
       .rejects.toThrow(/test data already loaded/);
     expect(await db.all<any>(`SELECT tool FROM refusals`)).toEqual([expect.objectContaining({ tool: "load_simulation" })]);
   });
 
   it("refuses an invalid package and records nothing", async () => {
     await freshDb();
-    await expect(callTool(db, "simulation", "load_simulation", { package: { name: "X", cases: [] }, receipt_id: "t-bad" }))
+    await expect(callTool(db, "simulation", "load_simulation", { package: { name: "X", cases: [] }, ticket_id: "t-bad" }))
       .rejects.toThrow(/cases.*non-empty/);
     expect(await db.all(`SELECT * FROM messages`)).toHaveLength(0);
     expect(await db.all<any>(`SELECT tool, receipt_id FROM refusals`)).toEqual([
@@ -193,15 +193,15 @@ describe("clear_simulation", () => {
   const count = async (table: string) => Number((await db.get<{ n: number }>(`SELECT COUNT(*) as n FROM ${table}`))!.n);
 
   async function useIt() {
-    await callTool(db, "simulation", "load_simulation", { package: validPackage(), receipt_id: "t-load" });
+    await callTool(db, "simulation", "load_simulation", { package: validPackage(), ticket_id: "t-load" });
     await callTool(db, "simulation", "send_message", { to: ["einkauf@huber.example"], subject: "Re: Quote please", body: "Quote attached." });
-    await expect(callTool(db, "simulation", "load_simulation", { package: validPackage(), receipt_id: "t-refused" })).rejects.toThrow();
+    await expect(callTool(db, "simulation", "load_simulation", { package: validPackage(), ticket_id: "t-refused" })).rejects.toThrow();
   }
 
   it("live mode refuses it and deletes nothing", async () => {
     await freshDb();
     await useIt();
-    await expect(callTool(db, "live", "clear_simulation", { receipt_id: "t-clear" })).rejects.toThrow(LIVE_NOT_AVAILABLE);
+    await expect(callTool(db, "live", "clear_simulation", { ticket_id: "t-clear" })).rejects.toThrow(LIVE_NOT_AVAILABLE);
     expect(await count("messages")).toBe(3);
   });
 
@@ -209,7 +209,7 @@ describe("clear_simulation", () => {
     await freshDb();
     await useIt();
     for (const t of TABLES) expect(await count(t), t).toBeGreaterThan(0);
-    const result = (await callTool(db, "simulation", "clear_simulation", { receipt_id: "t-clear" })) as any;
+    const result = (await callTool(db, "simulation", "clear_simulation", { ticket_id: "t-clear" })) as any;
     expect(result).toMatchObject({ cleared: true, deleted: { messages: 3, reference_replies: 2, simulation_load: 1, refusals: 1 } });
     for (const t of TABLES) expect(await count(t), t).toBe(0);
     expect(await db.all(`SELECT tool, receipt_id FROM changes`)).toEqual([{ tool: "clear_simulation", receipt_id: "t-clear" }]);
@@ -219,8 +219,8 @@ describe("clear_simulation", () => {
     await freshDb();
     await callTool(db, "simulation", "clear_simulation", {}); // on an empty inbox: harmless
     await useIt();
-    await callTool(db, "simulation", "clear_simulation", { receipt_id: "t-clear" });
-    const again = (await callTool(db, "simulation", "load_simulation", { package: validPackage(), receipt_id: "t-load-2" })) as any;
+    await callTool(db, "simulation", "clear_simulation", { ticket_id: "t-clear" });
+    const again = (await callTool(db, "simulation", "load_simulation", { package: validPackage(), ticket_id: "t-load-2" })) as any;
     expect(again.cases_loaded).toBe(2);
     expect(await db.all(`SELECT tool, receipt_id FROM changes ORDER BY at, rowid`)).toEqual([
       { tool: "clear_simulation", receipt_id: "t-clear" },

@@ -68,7 +68,7 @@ DATABASE_URL=postgres://user:pass@host:5432/mydb node dist/index.js
 | `load_simulation` | Load a simulation package into an empty inbox, one message per case — create only |
 | `clear_simulation` | Delete all test data so a new package can be loaded |
 
-Every change tool declares `receipt_id` in its schema; the gateway injects it,
+Every change tool declares `ticket_id` in its schema; the gateway injects it,
 agents do not set it.
 
 ---
@@ -105,7 +105,7 @@ connector reads only `cases` and ignores the rest:
   sent messages, the kept replies, and the record of changes and refusals — so
   the same cases can run again under a different setup, or other cases under
   the same one. Refused in live mode. The clear itself stays recorded as one
-  change with its `receipt_id`. Cannot be undone — take an `export` first if
+  change with its `ticket_id`. Cannot be undone — take an `export` first if
   you want to keep the record.
 - One inbox message is created per case: `from` = the case's requester, `to` =
   a fixed simulated company address derived from the package name (e.g.
@@ -137,12 +137,12 @@ HAP profile. Only the system behind it is simulated, so the tickets issued
 during the test are the same tickets that will be issued live.
 
 **Changes.** Every successful `send_message` / `load_simulation` is recorded
-in a `changes` table (time, tool, document id, summary, and the `receipt_id`
+in a `changes` table (time, tool, document id, summary, and the `ticket_id`
 the gateway injected).
 
 **Refusals after the gateway.** When the connector refuses a change call the
 gateway already let through (bad recipient email, unknown `in_reply_to`, a
-second `load_simulation`), it records the refusal with the `receipt_id` the
+second `load_simulation`), it records the refusal with the `ticket_id` the
 gateway injected — a ticket then exists for an action that never happened, and
 this record is the only place that says so.
 

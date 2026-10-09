@@ -1,7 +1,7 @@
 /** The MCP tool surface — kept in its own module so tests can read it without starting the server. */
 import { SIMULATION_PACKAGE_SCHEMA } from "../simulation-package-schema.js";
 import { SIMULATION_PACKAGE_GUIDE } from "../simulation-package-guide.js";
-const RECEIPT_FIELD = {
+const TICKET_FIELD = {
   type: "string" as const,
   description: "Authorization reference for this call, set by the governing gateway — agents do not set this.",
 };
@@ -45,7 +45,7 @@ export const TOOL_DEFINITIONS = [
         subject: { type: "string", description: "Subject line" },
         body: { type: "string", description: "Message body" },
         in_reply_to: { type: "string", description: "ID of the message this replies to (optional) — must exist" },
-        receipt_id: RECEIPT_FIELD,
+        ticket_id: TICKET_FIELD,
       },
       required: ["to", "subject", "body"],
     },
@@ -60,7 +60,7 @@ export const TOOL_DEFINITIONS = [
       type: "object",
       properties: {
         package: { ...SIMULATION_PACKAGE_SCHEMA, description: `${SIMULATION_PACKAGE_SCHEMA.description} This connector loads \`name\`, optional \`email\` and \`cases\` (one inbox message per case request; replies kept for comparison); \`customers\`, \`products\` and \`contacts\` are used by the CRM and the ERP.` },
-        receipt_id: RECEIPT_FIELD,
+        ticket_id: TICKET_FIELD,
       },
       required: ["package"],
     },
@@ -74,7 +74,7 @@ export const TOOL_DEFINITIONS = [
     inputSchema: {
       type: "object",
       properties: {
-        receipt_id: RECEIPT_FIELD,
+        ticket_id: TICKET_FIELD,
       },
       required: [],
     },

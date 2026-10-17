@@ -15,8 +15,9 @@ replies. **Nothing leaves the laptop** — there is no outbound mail transport,
 no real mailbox, no network call on `send_message`.
 
 - **`list_messages` / `get_message`** — read the inbox or sent folder
-- **`send_message`** — write a reply; it lands in the "sent" folder, nothing
-  is actually transmitted
+- **`get_attachment`** — read one attachment's file content, by explicit selection
+- **`send_message`** — write a reply, optionally with attachments; it lands
+  in the "sent" folder, nothing is actually transmitted
 - **`load_simulation`** — create the test inbox from a simulation package,
   once, into an empty database
 
@@ -25,8 +26,8 @@ Every write is gated through the HAP `email` profile
 
 ### Out of scope for 0.1
 
-No drafts, no labels/folders beyond inbox/sent, no attachments, no deleting
-messages, no live mailbox adapter.
+No drafts, no labels/folders beyond inbox/sent, no deleting messages, no live
+mailbox adapter.
 
 ---
 
@@ -58,18 +59,49 @@ DATABASE_URL=postgres://user:pass@host:5432/mydb node dist/index.js
 | Tool | Description |
 |------|-------------|
 | `list_messages` | List messages in a folder (`inbox` default, or `sent`), newest first |
-| `get_message` | Get a single message, including its full body |
+| `get_message` | Get a single message, including its full body and attachment metadata |
+| `get_attachment` | Get one attachment's file content (base64), by sha256 or index |
 
 ### Changes
 
 | Tool | Description |
 |------|-------------|
-| `send_message` | Send a reply (`to`, `cc?`, `subject`, `body`, `in_reply_to?`) — simulated, lands in "sent" |
+| `send_message` | Send a reply (`to`, `cc?`, `subject`, `body`, `in_reply_to?`, `attachments?`) — simulated, lands in "sent" |
 | `load_simulation` | Load a simulation package into an empty inbox, one message per case — create only |
 | `clear_simulation` | Delete all test data so a new package can be loaded |
 
 Every change tool declares `ticket_id` in its schema; the gateway injects it,
 agents do not set it.
+
+### Attachments
+
+The agent never carries file bytes — it refers to a document, and the
+governing gateway fetches it and supplies the bytes. `send_message` accepts
+an optional `attachments` array:
+
+```json
+"attachments": [
+  { "filename": "invoice.pdf", "contentType": "application/pdf", "contentBase64": "..." }
+]
+```
+
+- At most **10 files**, **10 MB** each, **25 MB** total per message
+  (`MAX_ATTACHMENTS`, `MAX_ATTACHMENT_BYTES`, `MAX_TOTAL_ATTACHMENT_BYTES` in
+  `src/attachments.ts`). Refused whole on the first problem, naming the
+  field (e.g. `attachments[1].contentBase64`) — same rule as the simulation
+  package loader.
+- `filename` must not contain a path separator or be `.`/`..`; `contentType`
+  must be a MIME type; `contentBase64` must actually decode.
+- `get_message` and `send_message` return attachment **metadata only**
+  (`filename`, `contentType`, `size`, `sha256`) — never the file content.
+- `get_attachment({ message_id, sha256 })` or `get_attachment({ message_id,
+  index })` is the one place file content (base64) comes back, by explicit
+  selection — give exactly one of `sha256`/`index`.
+- Stored in a dedicated `attachments` table (SQLite and Postgres).
+- Inbound simulated messages do **not** carry attachments: the simulation
+  package format (`SIMULATION_PACKAGE_SCHEMA`) is shared byte-identically
+  with the CRM and ERP connectors, so it was left unchanged rather than
+  forked for this one connector.
 
 ---
 

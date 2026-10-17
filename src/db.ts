@@ -66,6 +66,23 @@ CREATE TABLE IF NOT EXISTS changes (
   document_id TEXT,
   summary TEXT
 );
+
+-- Files attached to a sent message. The agent never supplies these bytes
+-- itself (the governing gateway fetches the referenced document and passes
+-- it in); this table only stores what send_message was given. content_base64
+-- holds the file content so the same column works unchanged on SQLite and
+-- Postgres (no BLOB/BYTEA type split to keep in step). "position" is the
+-- 0-based order within the message, for get_attachment's index selector.
+CREATE TABLE IF NOT EXISTS attachments (
+  id TEXT PRIMARY KEY,
+  message_id TEXT NOT NULL,
+  position INTEGER NOT NULL,
+  filename TEXT NOT NULL,
+  content_type TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  sha256 TEXT NOT NULL,
+  content_base64 TEXT NOT NULL
+);
 `;
 
 // SQLite adapter using better-sqlite3 (synchronous API wrapped in async)

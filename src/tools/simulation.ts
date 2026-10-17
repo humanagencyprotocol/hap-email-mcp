@@ -20,8 +20,8 @@ export function receivedTimes(now: Date, n: number): string[] {
   return Array.from({ length: n }, (_, i) => new Date(Math.floor((now.getTime() - (n - i) * step) / 1000) * 1000).toISOString());
 }
 
-/** Every table that holds test data. */
-const CLEAR_TABLES = ["messages", "reference_replies", "simulation_load", "changes", "refusals"] as const;
+/** Every table that holds test data. attachments first: no FK is declared, but it is still part of a message. */
+const CLEAR_TABLES = ["attachments", "messages", "reference_replies", "simulation_load", "changes", "refusals"] as const;
 
 export async function load_simulation(db: Db, args: Record<string, any>) {
   const { package: pkg } = args;

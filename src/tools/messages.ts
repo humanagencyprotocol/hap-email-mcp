@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import type { Db } from "../db.js";
 import { companyAddress } from "../simulation.js";
+import { parseAttachments, insertAttachments, getAttachmentsMeta, type AttachmentMeta } from "../attachments.js";
 
 export interface MessageRow {
   id: string;
@@ -37,8 +38,13 @@ function toListEntry(row: MessageRow) {
   };
 }
 
-/** Public shape of a get_message result — the body is included, the reference reply never is. */
-function toFullMessage(row: MessageRow) {
+/**
+ * Public shape of a get_message result — the body is included, the reference
+ * reply never is. `attachments` is metadata only (filename, contentType,
+ * size, sha256) — never file content; get_attachment returns content, by
+ * explicit selection.
+ */
+function toFullMessage(row: MessageRow, attachments: AttachmentMeta[] = []) {
   return {
     id: row.id,
     folder: row.folder,
@@ -49,6 +55,7 @@ function toFullMessage(row: MessageRow) {
     body: row.body,
     received_at: row.received_at,
     in_reply_to: row.in_reply_to,
+    attachments,
   };
 }
 
@@ -70,7 +77,8 @@ export async function get_message(db: Db, args: Record<string, any>) {
   if (!id) throw new Error("id is required");
   const row = await db.get<MessageRow>(`SELECT * FROM messages WHERE id = ?`, [id]);
   if (!row) throw new Error(`Unknown message id: ${id}`);
-  return toFullMessage(row);
+  const attachments = await getAttachmentsMeta(db, id);
+  return toFullMessage(row, attachments);
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -97,7 +105,7 @@ async function resolveSelf(db: Db): Promise<{ name: string; email: string }> {
 export async function send_message(db: Db, args: Record<string, any>) {
   // ticket_id: stored on the existing receipt_id column (internal storage
   // name, unchanged by the v0.7 wire rename of the tool argument).
-  const { to, cc, subject, body, in_reply_to, ticket_id } = args;
+  const { to, cc, subject, body, in_reply_to, attachments, ticket_id } = args;
 
   const toList = requireEmailList(to, "to");
   const ccList = cc === undefined ? [] : requireEmailList(cc, "cc", { allowEmpty: true });
@@ -109,6 +117,10 @@ export async function send_message(db: Db, args: Record<string, any>) {
     const parent = await db.get(`SELECT id FROM messages WHERE id = ?`, [in_reply_to]);
     if (!parent) throw new Error(`Unknown in_reply_to message id: ${in_reply_to}`);
   }
+
+  // Validated before anything is written — a half-sent message with some
+  // attachments stored and some refused would make later reads lie.
+  const parsedAttachments = parseAttachments(attachments);
 
   const self = await resolveSelf(db);
   const id = uuidv4();
@@ -122,7 +134,9 @@ export async function send_message(db: Db, args: Record<string, any>) {
       subject, body, now, in_reply_to ?? null, ticket_id ?? null,
     ],
   );
+  await insertAttachments(db, id, parsedAttachments);
 
   const row = await db.get<MessageRow>(`SELECT * FROM messages WHERE id = ?`, [id]);
-  return toFullMessage(row!);
+  const attachmentsMeta = await getAttachmentsMeta(db, id);
+  return toFullMessage(row!, attachmentsMeta);
 }

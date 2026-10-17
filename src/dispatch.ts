@@ -7,6 +7,7 @@ import type { Db } from "./db.js";
 import { LIVE_NOT_AVAILABLE, type EmailMode } from "./mode.js";
 import { list_messages, get_message, send_message } from "./tools/messages.js";
 import { load_simulation, clear_simulation } from "./tools/simulation.js";
+import { get_attachment } from "./attachments.js";
 
 /** Tools that change the connector's state — the ones the gateway issues a ticket for. */
 export const CHANGE_TOOLS = new Set(["send_message", "load_simulation", "clear_simulation"]);
@@ -15,6 +16,7 @@ async function runTool(db: Db, name: string, args: Record<string, any>): Promise
   switch (name) {
     case "list_messages": return list_messages(db, args);
     case "get_message": return get_message(db, args);
+    case "get_attachment": return get_attachment(db, args);
     case "send_message": return send_message(db, args);
     case "load_simulation": return load_simulation(db, args);
     case "clear_simulation": return clear_simulation(db, args);

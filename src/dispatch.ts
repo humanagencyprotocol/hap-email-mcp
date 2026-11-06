@@ -4,7 +4,8 @@
  */
 import { randomUUID } from "crypto";
 import type { Db } from "./db.js";
-import { LIVE_NOT_AVAILABLE, type EmailMode } from "./mode.js";
+import { LIVE_NOT_AVAILABLE, getLiveAdapter, type EmailMode } from "./mode.js";
+import { callGmailTool } from "./live/gmail/dispatch.js";
 import { list_messages, get_message, send_message } from "./tools/messages.js";
 import { load_simulation, clear_simulation } from "./tools/simulation.js";
 import { get_attachment } from "./attachments.js";
@@ -51,8 +52,17 @@ function describeChange(name: string, result: unknown): { documentId: string | n
  * refused anything. Reads record nothing either way. Both tables store the id
  * in their existing receipt_id column (internal storage name, unchanged).
  */
-export async function callTool(db: Db, mode: EmailMode, name: string, args: Record<string, any>): Promise<unknown> {
-  if (mode === "live") throw new Error(LIVE_NOT_AVAILABLE);
+export async function callTool(
+  db: Db,
+  mode: EmailMode,
+  name: string,
+  args: Record<string, any>,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<unknown> {
+  if (mode === "live") {
+    if (getLiveAdapter(env) === "gmail") return callGmailTool(name, args, env);
+    throw new Error(LIVE_NOT_AVAILABLE);
+  }
   const ticketId = typeof args.ticket_id === "string" ? args.ticket_id : null;
   try {
     const result = await runTool(db, name, args);

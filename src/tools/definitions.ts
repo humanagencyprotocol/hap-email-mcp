@@ -58,7 +58,9 @@ export const TOOL_DEFINITIONS = [
     description:
       "Send a message (to, cc, subject, body; optionally in reply to a message, optionally with attachments). " +
       "Attachments are supplied by the governing gateway, not by the agent: the agent refers to the document it " +
-      "means, it does not attach file content itself. Returns the sent message.",
+      "means, it does not attach file content itself. When replying (in_reply_to is set), set subject to \"Re: \" " +
+      "followed by the original subject, so mail clients keep the conversation together; the connector never " +
+      "changes the subject or adds any text of its own. Returns the sent message.",
     inputSchema: {
       type: "object",
       properties: {
@@ -66,7 +68,7 @@ export const TOOL_DEFINITIONS = [
         cc: { type: "array", items: { type: "string" }, description: "CC email addresses (optional)" },
         subject: { type: "string", description: "Subject line" },
         body: { type: "string", description: "Message body" },
-        in_reply_to: { type: "string", description: "ID of the message this replies to (optional) — must exist" },
+        in_reply_to: { type: "string", description: "ID of the message this replies to (optional) — must exist. When set, subject must be \"Re: \" + the original subject; the connector adds nothing itself." },
         attachments: {
           type: "array",
           maxItems: MAX_ATTACHMENTS,

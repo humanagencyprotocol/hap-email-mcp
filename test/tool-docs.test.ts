@@ -38,4 +38,13 @@ describe("tool documentation", () => {
       expect(props).toHaveProperty("ticket_id");
     }
   });
+
+  it("send_message tells the agent to reply with subject 'Re: ' + the original subject", () => {
+    const tool = TOOL_DEFINITIONS.find((t) => t.name === "send_message")!;
+    expect(tool.description).toMatch(/in_reply_to is set/);
+    expect(tool.description).toContain('"Re: " followed by the original subject');
+    expect(tool.description).toMatch(/never changes the subject/);
+    const props = (tool.inputSchema as { properties: Record<string, { description: string }> }).properties;
+    expect(props.in_reply_to.description).toContain('"Re: " + the original subject');
+  });
 });

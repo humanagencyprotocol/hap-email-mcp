@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0
 
 New live adapter: `EMAIL_MODE=live` with `EMAIL_LIVE_ADAPTER=gmail` reads and
 sends through a Gmail account (Gmail REST API). The Google sign-in arrives in

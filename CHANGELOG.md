@@ -1,6 +1,25 @@
 # Changelog
 
-## Unreleased
+## 0.5.0
+
+`list_messages` takes an optional `received_after` (ISO 8601 date-time): messages
+received before it are never returned, in the simulation and in the Gmail adapter
+(`after:<unix seconds>` in the query, then an exact check on the message date).
+The governing gateway sets it from the read-age window, so a list view cannot
+reach past what `get_message` would allow.
+
+New live adapter: `EMAIL_MODE=live` with `EMAIL_LIVE_ADAPTER=gmail` reads and
+sends through a Gmail account (Gmail REST API). The Google sign-in arrives in
+the environment as `CLIENT_ID`, `CLIENT_SECRET`, `REFRESH_TOKEN`. Same tools and
+output shapes as the simulation; `load_simulation` / `clear_simulation` are
+refused. Contract: `send_message` sends exactly `to`, `cc`, `subject`, `body`
+and the attachments it was given. No "Re:" is added, no quote of the earlier
+message. A reply (`in_reply_to` = the Gmail id of the message answered) stays in
+its thread with correct `In-Reply-To` / `References`; headers are folded at
+whitespace, never with quoted-printable soft breaks. Checked by
+`test/gmail-contract.test.ts` (pure) and `test/gmail-live.test.ts` (real
+account, skipped without credentials). Without `EMAIL_LIVE_ADAPTER`, `live`
+still refuses every call.
 
 `send_message` accepts an optional `attachments` argument
 (`[{ filename, contentType, contentBase64 }]`, max 10 files / 10 MB each /

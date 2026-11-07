@@ -162,7 +162,7 @@ The connector has a switch, `EMAIL_MODE`:
 | Mode | What answers | Status |
 |---|---|---|
 | `simulation` (default) | the built-in simulated inbox (the database above) | available |
-| `live` | a real mailbox | no adapter in 0.x — **every call is refused**, reads included, nothing is read or changed |
+| `live` | a real mailbox | needs `EMAIL_LIVE_ADAPTER=gmail` plus a Google sign-in (`CLIENT_ID`, `CLIENT_SECRET`, `REFRESH_TOKEN`). Without an adapter **every call is refused**, reads included, nothing is read or changed |
 
 The point: a three-week test runs on exactly this connector, its tools and its
 HAP profile. Only the system behind it is simulated, so the tickets issued

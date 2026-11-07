@@ -101,3 +101,29 @@ describe("get_message", () => {
     expect(fetched.body).toBe("full body text");
   });
 });
+
+describe("list_messages received_after", () => {
+  async function seed(id: string, receivedAt: string) {
+    await db.run(
+      `INSERT INTO messages (id, folder, from_name, from_email, to_json, cc_json, subject, body, received_at) VALUES (?, 'inbox', 'A', 'a@example.com', '[]', '[]', ?, 'b', ?)`,
+      [id, `s-${id}`, receivedAt],
+    );
+  }
+
+  it("never returns messages older than received_after", async () => {
+    await seed("old", "2026-01-01T10:00:00.000Z");
+    await seed("edge", "2026-06-01T00:00:00.000Z");
+    await seed("new", "2026-10-01T10:00:00.000Z");
+    const ids = async (args: object) => ((await callTool(db, "simulation", "list_messages", args)) as any[]).map((m) => m.id);
+    expect(await ids({})).toEqual(["new", "edge", "old"]);
+    expect(await ids({ received_after: "2026-06-01T00:00:00Z" })).toEqual(["new", "edge"]);
+    expect(await ids({ received_after: "2026-06-01T00:00:00.001Z" })).toEqual(["new"]);
+    expect(await ids({ received_after: "2027-01-01T00:00:00Z" })).toEqual([]);
+    expect(await ids({ received_after: "2026-01-01T00:00:00Z", limit: 1 })).toEqual(["new"]);
+  });
+
+  it("refuses a value that is not an ISO 8601 date", async () => {
+    await expect(callTool(db, "simulation", "list_messages", { received_after: "yesterday" })).rejects.toThrow(/received_after/);
+    await expect(callTool(db, "simulation", "list_messages", { received_after: 12345 })).rejects.toThrow(/received_after/);
+  });
+});

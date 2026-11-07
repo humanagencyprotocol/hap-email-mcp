@@ -91,6 +91,13 @@ describe.skipIf(!creds)("Gmail adapter against the real test account", () => {
       expect(Object.keys(entry).sort()).toEqual(["folder", "from", "id", "received_at", "snippet", "subject", "to"]);
       expect(entry.subject).toBe(subject);
 
+      // 5b. the read window: received_after at the message's own time keeps it, one second later drops it
+      const atIt = (await callGmailTool("list_messages", { folder: "sent", limit: 10, received_after: entry.received_at }, env, client)) as any[];
+      expect(atIt.map((m) => m.id)).toContain(reply.id);
+      const later = new Date(Date.parse(entry.received_at) + 1000).toISOString();
+      const pastIt = (await callGmailTool("list_messages", { folder: "sent", limit: 10, received_after: later }, env, client)) as any[];
+      expect(pastIt.map((m) => m.id)).not.toContain(reply.id);
+
       console.log("[live contract] headers on the sent message:", p.headers.map((h) => h.name).join(", "));
       console.log("[live contract] OK: subject, to, in-reply-to, references, body exact; same thread; no quote");
     } finally {

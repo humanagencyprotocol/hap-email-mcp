@@ -98,8 +98,8 @@ export class GmailClient {
     return this.request("GET", "/profile");
   }
 
-  listIds(labelId: string, limit: number): Promise<{ messages?: { id: string; threadId: string }[] }> {
-    return this.request("GET", "/messages", { labelIds: labelId, maxResults: String(limit) });
+  listIds(labelId: string, limit: number, q?: string): Promise<{ messages?: { id: string; threadId: string }[] }> {
+    return this.request("GET", "/messages", { labelIds: labelId, maxResults: String(limit), ...(q ? { q } : {}) });
   }
 
   getMetadata(id: string, headers: string[]): Promise<GmailMessage> {

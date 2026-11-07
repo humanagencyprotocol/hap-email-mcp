@@ -129,3 +129,32 @@ describe("live mode wiring", () => {
     expect(() => getLiveAdapter({ EMAIL_LIVE_ADAPTER: "outlook" })).toThrow(/must be one of gmail/);
   });
 });
+
+describe("list_messages received_after (Gmail adapter)", () => {
+  function fakeClient(msgs: { id: string; internalDate: string }[]) {
+    const calls: { label: string; limit: number; q?: string }[] = [];
+    const client = {
+      listIds: async (label: string, limit: number, q?: string) => { calls.push({ label, limit, q }); return { messages: msgs.map((m) => ({ id: m.id, threadId: "t" })) }; },
+      getMetadata: async (id: string) => ({ id, threadId: "t", internalDate: msgs.find((m) => m.id === id)!.internalDate, labelIds: ["INBOX"], payload: { headers: [] }, snippet: "" }),
+    };
+    return { client: client as any, calls };
+  }
+  const T = Date.parse("2026-06-01T12:00:00.500Z");
+
+  it("sends after:<unix seconds> and drops anything older, even if Gmail returned it", async () => {
+    const { client, calls } = fakeClient([{ id: "new", internalDate: String(T + 1000) }, { id: "edge", internalDate: String(T) }, { id: "old", internalDate: String(T - 1) }]);
+    const { callGmailTool } = await import("../src/live/gmail/dispatch.js");
+    const out = (await callGmailTool("list_messages", { received_after: "2026-06-01T12:00:00.500Z" }, {} as NodeJS.ProcessEnv, client)) as any[];
+    expect(calls[0].q).toBe(`after:${Math.floor(T / 1000)}`);
+    expect(out.map((m) => m.id)).toEqual(["new", "edge"]);
+  });
+
+  it("without received_after no query is sent; a bad value is refused before any request", async () => {
+    const { client, calls } = fakeClient([{ id: "a", internalDate: String(T) }]);
+    const { callGmailTool } = await import("../src/live/gmail/dispatch.js");
+    expect(((await callGmailTool("list_messages", {}, {} as NodeJS.ProcessEnv, client)) as any[]).length).toBe(1);
+    expect(calls[0].q).toBeUndefined();
+    await expect(callGmailTool("list_messages", { received_after: "last week" }, {} as NodeJS.ProcessEnv, client)).rejects.toThrow(/received_after/);
+    expect(calls).toHaveLength(1);
+  });
+});

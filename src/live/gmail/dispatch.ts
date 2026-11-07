@@ -100,14 +100,20 @@ function fromOf(h: GmailMessage["payload"]) {
   return { name: f?.name ?? "", email: f?.email ?? "" };
 }
 
+import { parseReceivedAfter } from "../../received-after.js";
+
 async function list_messages(c: GmailClient, args: Record<string, any>) {
   const folder = args.folder ?? "inbox";
   if (folder !== "inbox" && folder !== "sent") {
     throw new Error(`Invalid folder: ${JSON.stringify(args.folder)} (must be "inbox" or "sent")`);
   }
   const limit = typeof args.limit === "number" && args.limit > 0 ? Math.min(args.limit, 500) : 50;
-  const ids = (await c.listIds(folder === "inbox" ? "INBOX" : "SENT", limit)).messages ?? [];
-  const msgs = await Promise.all(ids.map((m) => c.getMetadata(m.id, META)));
+  const after = parseReceivedAfter(args.received_after);
+  // Gmail's after: works in whole seconds; round down, then filter exactly on internalDate below.
+  const q = after === null ? undefined : `after:${Math.floor(after / 1000)}`;
+  const ids = (await c.listIds(folder === "inbox" ? "INBOX" : "SENT", limit, q)).messages ?? [];
+  const fetched = await Promise.all(ids.map((m) => c.getMetadata(m.id, META)));
+  const msgs = after === null ? fetched : fetched.filter((m) => Number(m.internalDate) >= after);
   return msgs.map((m) => ({
     id: m.id,
     folder,

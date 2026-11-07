@@ -59,17 +59,21 @@ function toFullMessage(row: MessageRow, attachments: AttachmentMeta[] = []) {
   };
 }
 
+import { parseReceivedAfter } from "../received-after.js";
+
 export async function list_messages(db: Db, args: Record<string, any>) {
   const folder = args.folder ?? "inbox";
   if (folder !== "inbox" && folder !== "sent") {
     throw new Error(`Invalid folder: ${JSON.stringify(args.folder)} (must be "inbox" or "sent")`);
   }
   const limit = typeof args.limit === "number" && args.limit > 0 ? args.limit : 50;
-  const rows = await db.all<MessageRow>(
-    `SELECT * FROM messages WHERE folder = ? ORDER BY received_at DESC, rowid DESC LIMIT ?`,
-    [folder, limit],
+  const after = parseReceivedAfter(args.received_after);
+  const all = await db.all<MessageRow>(
+    `SELECT * FROM messages WHERE folder = ? ORDER BY received_at DESC, rowid DESC`,
+    [folder],
   );
-  return rows.map(toListEntry);
+  const rows = after === null ? all : all.filter((r) => Date.parse(r.received_at) >= after);
+  return rows.slice(0, limit).map(toListEntry);
 }
 
 export async function get_message(db: Db, args: Record<string, any>) {

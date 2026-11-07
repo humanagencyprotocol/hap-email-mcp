@@ -18,6 +18,7 @@ export const TOOL_DEFINITIONS = [
       properties: {
         folder: { type: "string", enum: ["inbox", "sent"], description: "Which folder to list (default: inbox)" },
         limit: { type: "number", description: "Maximum results to return (default: 50)" },
+        received_after: { type: "string", description: "Only messages received at or after this time (ISO 8601 date-time). Older messages are never returned." },
       },
       required: [],
     },

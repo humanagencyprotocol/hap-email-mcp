@@ -29,6 +29,28 @@ export interface GmailMessage {
   raw?: string;
 }
 
+/** Gmail refuses too many parallel or too many per-minute reads; waiting and asking again is what it asks for. */
+const READ_WAITS_MS = [1_000, 2_000, 4_000, 8_000, 16_000];
+const MAX_WAIT_MS = 30_000;
+
+function isRateLimited(status: number, text: string): boolean {
+  return status === 429 || (status === 403 && /rate.?limit|quota exceeded|too many/i.test(text));
+}
+
+/** Run `fn` over `items`, at most `limit` at a time; results keep the order of `items`. */
+export async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
 export class GmailClient {
   private accessToken: string | null = null;
   private expiresAt = 0;
@@ -36,6 +58,7 @@ export class GmailClient {
   constructor(
     private readonly creds: { clientId: string; clientSecret: string; refreshToken: string },
     private readonly fetchImpl: typeof fetch = fetch,
+    private readonly sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
   ) {}
 
   static fromEnv(env: NodeJS.ProcessEnv = process.env, fetchImpl: typeof fetch = fetch): GmailClient {
@@ -77,15 +100,23 @@ export class GmailClient {
     for (const [k, v] of Object.entries(query ?? {})) {
       for (const item of Array.isArray(v) ? v : [v]) url.searchParams.append(k, item);
     }
-    const res = await this.fetchImpl(url, {
-      method,
-      headers: {
-        Authorization: `Bearer ${await this.token()}`,
-        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-    const text = await res.text();
+    // Only reads are asked again: a send is never repeated.
+    let res: Response;
+    let text: string;
+    for (let attempt = 0; ; attempt += 1) {
+      res = await this.fetchImpl(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${await this.token()}`,
+          ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+        },
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+      text = await res.text();
+      if (method !== "GET" || attempt >= READ_WAITS_MS.length || !isRateLimited(res.status, text)) break;
+      const asked = Number(res.headers.get("retry-after")) * 1000;
+      await this.sleep(Math.min(asked > 0 ? asked : READ_WAITS_MS[attempt], MAX_WAIT_MS));
+    }
     if (!res.ok) {
       let msg = text.slice(0, 300);
       try { msg = (JSON.parse(text) as { error?: { message?: string } }).error?.message ?? msg; } catch { /* keep raw */ }

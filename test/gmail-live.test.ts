@@ -31,6 +31,13 @@ function credentials(): { CLIENT_ID: string; CLIENT_SECRET: string; REFRESH_TOKE
 const creds = credentials();
 
 describe.skipIf(!creds)("Gmail adapter against the real test account", () => {
+  it("a large list does not run into Gmail's limit on parallel reads", async () => {
+    const env = { ...creds! } as NodeJS.ProcessEnv;
+    const list = (await callGmailTool("list_messages", { folder: "inbox", limit: 500 }, env, GmailClient.fromEnv(env))) as unknown[];
+    expect(Array.isArray(list)).toBe(true);
+    console.log(`listed ${list.length} messages`);
+  }, 180_000);
+
   it("a reply in a thread contains exactly the bound fields", async () => {
     const env = { ...creds! } as NodeJS.ProcessEnv;
     const client = GmailClient.fromEnv(env);

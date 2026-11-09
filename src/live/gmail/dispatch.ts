@@ -4,7 +4,7 @@
  * connector. Simulation-only tools are refused.
  */
 import { createHash } from "crypto";
-import { GmailClient, header, type GmailMessage, type GmailPart } from "./client.js";
+import { GmailClient, header, type GmailMessage, type GmailPart, mapLimit } from "./client.js";
 import { buildRawMessage } from "./mime.js";
 import { parseAttachments } from "../../attachments.js";
 
@@ -102,6 +102,9 @@ function fromOf(h: GmailMessage["payload"]) {
 
 import { parseReceivedAfter } from "../../received-after.js";
 
+/** Gmail answers 429 to many parallel reads for one user. */
+const LIST_CONCURRENCY = 5;
+
 async function list_messages(c: GmailClient, args: Record<string, any>) {
   const folder = args.folder ?? "inbox";
   if (folder !== "inbox" && folder !== "sent") {
@@ -112,7 +115,7 @@ async function list_messages(c: GmailClient, args: Record<string, any>) {
   // Gmail's after: works in whole seconds; round down, then filter exactly on internalDate below.
   const q = after === null ? undefined : `after:${Math.floor(after / 1000)}`;
   const ids = (await c.listIds(folder === "inbox" ? "INBOX" : "SENT", limit, q)).messages ?? [];
-  const fetched = await Promise.all(ids.map((m) => c.getMetadata(m.id, META)));
+  const fetched = await mapLimit(ids, LIST_CONCURRENCY, (m) => c.getMetadata(m.id, META));
   const msgs = after === null ? fetched : fetched.filter((m) => Number(m.internalDate) >= after);
   return msgs.map((m) => ({
     id: m.id,

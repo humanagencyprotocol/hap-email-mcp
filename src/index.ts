@@ -26,7 +26,7 @@ async function main() {
   console.error(`[email-mcp] mode: ${mode}`);
 
   const server = new Server(
-    { name: "email", version: "0.5.0" },
+    { name: "email", version: "0.5.1" },
     { capabilities: { tools: {} } }
   );
 

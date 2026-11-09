@@ -81,6 +81,15 @@ describe("send_message with attachments", () => {
     expect(await db.all(`SELECT * FROM attachments`)).toHaveLength(0);
   });
 
+  it("accepts a single file of exactly 18,000,000 bytes", async () => {
+    const exact = Buffer.alloc(18_000_000, 3).toString("base64");
+    const sent = (await callTool(db, "simulation", "send_message", {
+      to: ["a@example.com"], subject: "s", body: "b",
+      attachments: [{ filename: "exact.bin", contentType: "application/octet-stream", contentBase64: exact }],
+    })) as { attachments: Array<{ size: number }> };
+    expect(sent.attachments[0].size).toBe(18_000_000);
+  });
+
   it("refuses a single file over the per-file size limit", async () => {
     const big = Buffer.alloc(MAX_ATTACHMENT_BYTES + 1, 1).toString("base64");
     await expect(
@@ -88,7 +97,7 @@ describe("send_message with attachments", () => {
         to: ["a@example.com"], subject: "s", body: "b",
         attachments: [{ filename: "big.bin", contentType: "application/octet-stream", contentBase64: big }],
       }),
-    ).rejects.toThrow(/per-file limit is 10485760 bytes/);
+    ).rejects.toThrow(/per-file limit is 18000000 bytes/);
     expect(await db.all(`SELECT * FROM messages`)).toHaveLength(0);
   });
 

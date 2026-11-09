@@ -26,7 +26,7 @@ async function main() {
   console.error(`[email-mcp] mode: ${mode}`);
 
   const server = new Server(
-    { name: "email", version: "0.5.1" },
+    { name: "email", version: "0.5.2" },
     { capabilities: { tools: {} } }
   );
 
@@ -69,7 +69,8 @@ async function main() {
     process.exit(0);
   });
 
-  const transport = new StdioServerTransport();
+  // An 18 MB attachment is one JSON line of about 24 MB; the SDK's default is 10 MiB and it drops the connection above it.
+  const transport = new StdioServerTransport(undefined, undefined, { maxBufferSize: 128 * 1024 * 1024 });
   await server.connect(transport);
   console.error("[email-mcp] server started");
 }

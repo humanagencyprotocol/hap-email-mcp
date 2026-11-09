@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.2
+
+- Attachments up to 18 MB per file. Large attachments no longer drop the connection.
+
 ## 0.5.1
 
 - Gmail: listing many emails no longer fails with "too many requests". At most 5 messages are read at once, and a read that Gmail refuses for rate or quota reasons waits and is asked again. A send is never repeated.

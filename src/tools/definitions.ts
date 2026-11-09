@@ -75,7 +75,7 @@ export const TOOL_DEFINITIONS = [
           maxItems: MAX_ATTACHMENTS,
           description:
             `Files to attach, supplied by the governing gateway — agents do not set this directly. At most ` +
-            `${MAX_ATTACHMENTS} files, ${MAX_ATTACHMENT_BYTES / MB} MB each, ${MAX_TOTAL_ATTACHMENT_BYTES / MB} MB total.`,
+            `${MAX_ATTACHMENTS} files, ${MAX_ATTACHMENT_BYTES / 1_000_000} MB each, ${MAX_TOTAL_ATTACHMENT_BYTES / MB} MB total.`,
           items: {
             type: "object",
             required: ["filename", "contentType", "contentBase64"],

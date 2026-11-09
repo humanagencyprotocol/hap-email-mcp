@@ -12,7 +12,7 @@ import { createHash } from "crypto";
 import type { Db } from "./db.js";
 
 export const MAX_ATTACHMENTS = 10;
-export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB per file
+export const MAX_ATTACHMENT_BYTES = 18_000_000; // 18 MB per file
 export const MAX_TOTAL_ATTACHMENT_BYTES = 25 * 1024 * 1024; // 25 MB per message
 
 export interface ParsedAttachment {
@@ -103,7 +103,7 @@ export function parseAttachments(value: unknown): ParsedAttachment[] {
     const size = bytes.length;
     if (size === 0) fail(i, "contentBase64", "decodes to an empty file");
     if (size > MAX_ATTACHMENT_BYTES) {
-      fail(i, "contentBase64", `decodes to ${size} bytes — the per-file limit is ${MAX_ATTACHMENT_BYTES} bytes (10 MB)`);
+      fail(i, "contentBase64", `decodes to ${size} bytes — the per-file limit is ${MAX_ATTACHMENT_BYTES} bytes (18 MB)`);
     }
     total += size;
     const sha256 = createHash("sha256").update(bytes).digest("hex");

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1
+
+- Gmail: listing many emails no longer fails with "too many requests". At most 5 messages are read at once, and a read that Gmail refuses for rate or quota reasons waits and is asked again. A send is never repeated.
+
 ## 0.5.0
 
 `list_messages` takes an optional `received_after` (ISO 8601 date-time): messages

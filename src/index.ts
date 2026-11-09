@@ -69,7 +69,8 @@ async function main() {
     process.exit(0);
   });
 
-  const transport = new StdioServerTransport();
+  // A 25 MiB attachment is one JSON line of about 35 MB; the SDK's default is 10 MiB and it drops the connection above it.
+  const transport = new StdioServerTransport(undefined, undefined, { maxBufferSize: 128 * 1024 * 1024 });
   await server.connect(transport);
   console.error("[email-mcp] server started");
 }

@@ -3,7 +3,7 @@
 An email **simulator** for AI agents, built as an [MCP](https://modelcontextprotocol.io)
 server and gated through the [Human Agency Protocol](https://humanagencyprotocol.org).
 
-> **@humanagencyp/email-mcp** — unpublished (version 0.1.0, not yet on npm)
+> **@humanagencyp/email-mcp** — on npm (0.5.2)
 
 ---
 
@@ -195,7 +195,7 @@ refusals, reference_replies }` — the **only** place `reference_replies`
 ## HAP Profile
 
 This server is gated through the `email` profile
-(`github.com/humanagencyprotocol/hap-profiles/email@0.7`):
+(`github.com/humanagencyprotocol/hap-profiles/email@0.11`):
 
 - **Action types** — `delete`, `send`, `setup`
 - **Bounds** — `read_access`, `recipient_max`, `send_daily_max`, `setup_daily_max`
